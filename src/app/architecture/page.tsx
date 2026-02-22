@@ -1,19 +1,24 @@
-import Head from 'next/head';
-import { promises as fsPromises } from 'fs';
+import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 
-export default function Architecture() {
-  const [content, setContent] = React.useState('');
-  const [loading, setLoading] = React.useState(true);
+const AuthProvider = dynamic(() => import('../auth-provider'), { ssr: false })
 
-  React.useEffect(() => {
+function ArchitectureContent() {
+  const [content, setContent] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
     loadArchitecture();
   }, []);
 
   async function loadArchitecture() {
     try {
       const archPath = process.env.ARCHITECTURE_PATH || '/home/node/.openclaw/workspace/ARCHITECTURE.md';
-      const data = await fsPromises.readFile(archPath, 'utf-8');
-      setContent(data);
+      const response = await fetch('/api/architecture');
+      if (response.ok) {
+        const data = await response.json();
+        setContent(data.content);
+      }
     } catch (error) {
       console.error('Failed to load architecture:', error);
     } finally {
@@ -23,13 +28,7 @@ export default function Architecture() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4">
-      <Head>
-        <title>OpenClaw Architecture</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-      </Head>
-
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
         <div className="bg-gray-800 rounded-lg p-4 mb-4 shadow-lg">
           <h1 className="text-2xl font-bold">🏗 OpenClaw Core Architecture</h1>
           <p className="text-gray-400 text-sm">
@@ -50,7 +49,6 @@ export default function Architecture() {
           </div>
         )}
 
-        {/* Back button */}
         <div className="mt-4">
           <a href="/" className="bg-gray-700 hover:bg-gray-600 rounded px-4 py-2 font-semibold inline-block">
             ← Back to Task Board
@@ -58,5 +56,13 @@ export default function Architecture() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Architecture() {
+  return (
+    <AuthProvider>
+      <ArchitectureContent />
+    </AuthProvider>
   );
 }

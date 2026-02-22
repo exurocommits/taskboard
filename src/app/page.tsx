@@ -1,31 +1,7 @@
-import Head from 'next/head'
-import { promises as fsPromises } from 'fs'
-import path from 'path'
+import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 
-interface Task {
-  id: string
-  project: string
-  name: string
-  status: 'completed' | 'in_progress' | 'blocked' | 'failed' | 'pending' | 'not_started'
-  assigned: string
-  notes: string
-}
-
-interface TaskBoard {
-  projects: {
-    name: string
-    tasks: Task[]
-  }[]
-  lastUpdated: string
-  summary: {
-    completed: number
-    in_progress: number
-    blocked: number
-    failed: number
-    pending: number
-    not_started: number
-  }
-}
+const AuthProvider = dynamic(() => import('./auth-provider'), { ssr: false })
 
 const STATUS_ICONS = {
   completed: '✅',
@@ -36,19 +12,21 @@ const STATUS_ICONS = {
   not_started: '🔵',
 };
 
-export default function Home() {
-  const [taskBoard, setTaskBoard] = React.useState<TaskBoard | null>(null);
-  const [loading, setLoading] = React.useState(true);
+function TaskBoardContent() {
+  const [taskBoard, setTaskBoard] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  React.useEffect(() => {
+  useEffect(() => {
     loadTasks();
   }, []);
 
   async function loadTasks() {
     try {
       const response = await fetch('/api/tasks');
-      const data = await response.json();
-      setTaskBoard(data);
+      if (response.ok) {
+        const data = await response.json();
+        setTaskBoard(data);
+      }
     } catch (error) {
       console.error('Failed to load tasks:', error);
     } finally {
@@ -59,10 +37,6 @@ export default function Home() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-900 text-white p-4">
-        <Head>
-          <title>OpenClaw Task Board</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-        </Head>
         <div className="max-w-md mx-auto text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent"></div>
           <p className="mt-4 text-gray-400">Loading task board...</p>
@@ -74,10 +48,6 @@ export default function Home() {
   if (!taskBoard) {
     return (
       <div className="min-h-screen bg-gray-900 text-white p-4">
-        <Head>
-          <title>OpenClaw Task Board</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-        </Head>
         <div className="max-w-md mx-auto text-center">
           <p className="text-red-400">Failed to load tasks</p>
         </div>
@@ -87,11 +57,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4">
-      <Head>
-        <title>OpenClaw Task Board</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-      </Head>
-
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="bg-gray-800 rounded-lg p-4 shadow-lg">
@@ -130,7 +95,7 @@ export default function Home() {
 
         {/* Projects */}
         <div className="space-y-6">
-          {taskBoard.projects.map((project, idx) => (
+          {taskBoard.projects.map((project: any, idx: number) => (
             <div key={idx} className="bg-gray-800 rounded-lg p-4 shadow-lg">
               <h3 className="text-lg font-semibold mb-3">{project.name}</h3>
               
@@ -145,7 +110,7 @@ export default function Home() {
                     </tr>
                   </thead>
                   <tbody>
-                    {project.tasks.map((task, taskIdx) => (
+                    {project.tasks.map((task: any, taskIdx: number) => (
                       <tr key={taskIdx} className="border-b border-gray-700 hover:bg-gray-700">
                         <td className="p-2">{task.name}</td>
                         <td className="p-2 text-center">
@@ -178,5 +143,13 @@ export default function Home() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <AuthProvider>
+      <TaskBoardContent />
+    </AuthProvider>
   );
 }
